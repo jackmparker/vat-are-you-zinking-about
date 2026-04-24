@@ -510,7 +510,15 @@ class VAYZ_Core {
 
 		// Simple string replacement (fast for most cases)
 		$data = str_replace( $old_url, $new_url, $data );
-		$data = str_replace( $old_url_no_protocol, $new_url_no_protocol, $data );
+		// When the new host contains the old host (e.g. dev.example.com vs example.com),
+		// a naive no-protocol replace would corrupt already-replaced URLs (example.com
+		// matches inside dev.example.com). Protect the new host, then replace, then restore.
+		if ( $old_url_no_protocol !== $new_url_no_protocol && strlen( $new_url_no_protocol ) > 0 ) {
+			$host_protect = '~VAYZ~' . md5( $old_url_no_protocol . '|' . $new_url_no_protocol ) . '~VAYZ~';
+			$data         = str_replace( $new_url_no_protocol, $host_protect, $data );
+			$data         = str_replace( $old_url_no_protocol, $new_url_no_protocol, $data );
+			$data         = str_replace( $host_protect, $new_url_no_protocol, $data );
+		}
 		$data = str_replace( $old_path, $new_path, $data );
 
 		// Handle serialized data (only if we detect serialized patterns)
@@ -577,7 +585,12 @@ class VAYZ_Core {
 			$new_url_no_protocol = preg_replace( '#^https?://#', '', $new_url );
 
 			$data = str_replace( $old_url, $new_url, $data );
-			$data = str_replace( $old_url_no_protocol, $new_url_no_protocol, $data );
+			if ( $old_url_no_protocol !== $new_url_no_protocol && strlen( $new_url_no_protocol ) > 0 ) {
+				$host_protect = '~VAYZ~' . md5( $old_url_no_protocol . '|' . $new_url_no_protocol ) . '~VAYZ~';
+				$data         = str_replace( $new_url_no_protocol, $host_protect, $data );
+				$data         = str_replace( $old_url_no_protocol, $new_url_no_protocol, $data );
+				$data         = str_replace( $host_protect, $new_url_no_protocol, $data );
+			}
 			$data = str_replace( $old_path, $new_path, $data );
 		}
 
